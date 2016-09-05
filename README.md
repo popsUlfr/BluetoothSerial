@@ -60,6 +60,8 @@ There are some [sample projects](https://github.com/don/BluetoothSerial/tree/mas
 - [bluetoothSerial.clearDeviceDiscoveredListener](#cleardevicediscoveredlistener)
 - [bluetoothSerial.setName](#setname)
 - [bluetoothSerial.setDiscoverable](#setdiscoverable)
+- [bluetoothSerial.pair](#pair)
+- [bluetoothSerial.unpair](#unpair)
 
 ## connect
 
@@ -677,6 +679,65 @@ Not currently implemented.
 ### Quick Example
 
     bluetoothSerial.setDiscoverable(0);
+
+## pair
+
+Initiate pairing with a Bluetooth device.
+
+    bluetoothSerial.pair(macAddress, pin, pairSuccess, pairFailure);
+
+### Description
+
+Function `pair` initiates pairing with a Bluetooth device.  Success will be called when the pairing is successful.  Failure is called if the pairing fails. An error message is passed to the failure callback.
+
+#### Android
+For Android, `pair` takes a MAC address of the remote device and the PIN.
+
+#### iOS
+Not currently implemented.
+
+#### Windows Phone
+Not currently implemented.
+
+### Parameters
+
+- __macAddress__: Identifier of the remote device.
+- __pin__: PIN number of the remote device.
+- __pairSuccess__: Success callback function that is invoked when the pairing is successful.
+- __pairFailure__: Error callback function, invoked when error occurs or the pairing fails.
+
+### Quick Example
+
+    bluetoothSerial.pair("10:BF:48:CB:00:00", "1234", pairSuccess, pairFailure);
+
+## unpair
+
+Initiate unpairing with a Bluetooth device.
+
+    bluetoothSerial.unpair(macAddress, unpairSuccess, unpairFailure);
+
+### Description
+
+Function `unpair` initiates unpairing with a Bluetooth device.  Success will be called when the unpairing is successful.  Failure is called if the unpairing fails. An error message is passed to the failure callback.
+
+#### Android
+For Android, `unpair` takes a MAC address of the remote device.
+
+#### iOS
+Not currently implemented.
+
+#### Windows Phone
+Not currently implemented.
+
+### Parameters
+
+- __macAddress__: Identifier of the remote device.
+- __unpairSuccess__: Success callback function that is invoked when the unpairing is successful.
+- __unpairFailure__: Error callback function, invoked when error occurs or the unpairing fails.
+
+### Quick Example
+
+    bluetoothSerial.unpair("10:BF:48:CB:00:00", pairSuccess, pairFailure);
 
 # Misc
 

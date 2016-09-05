@@ -24,6 +24,7 @@ import org.json.JSONObject;
 
 import java.util.HashMap;
 import java.util.Set;
+import java.lang.reflect.Method;
 
 /**
  * PhoneGap Plugin for Serial Communication over Bluetooth
@@ -62,6 +63,8 @@ public class BluetoothSerial extends CordovaPlugin {
     private static final String CLEAR_DEVICE_DISCOVERED_LISTENER = "clearDeviceDiscoveredListener";
     private static final String SET_NAME = "setName";
     private static final String SET_DISCOVERABLE = "setDiscoverable";
+    private static final String PAIR = "pair";
+    private static final String UNPAIR = "unpair";
 
     // callbacks
     private CallbackContext enableBluetoothCallback;
@@ -352,7 +355,10 @@ public class BluetoothSerial extends CordovaPlugin {
                 Intent discoverIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_DISCOVERABLE);
                 discoverIntent.putExtra(BluetoothAdapter.EXTRA_DISCOVERABLE_DURATION, discoverableDuration);
                 cordova.getActivity().startActivity(discoverIntent);
-
+            } else if (action.equals(PAIR)) {
+                pairRequest(args, callbackContext);
+            } else if (action.equals(UNPAIR)) {
+                unpairRequest(args, callbackContext);
             } else {
                 validAction = false;
             }
@@ -455,6 +461,71 @@ public class BluetoothSerial extends CordovaPlugin {
         activity.registerReceiver(discoverReceiver, new IntentFilter(BluetoothDevice.ACTION_FOUND));
         activity.registerReceiver(discoverReceiver, new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED));
         bluetoothAdapter.startDiscovery();
+    }
+
+    private void unpairRequest(CordovaArgs args, final CallbackContext callbackContext) throws JSONException {
+        String macAddress = args.getString(0);
+        BluetoothDevice device = bluetoothAdapter.getRemoteDevice(macAddress);
+        Log.d(TAG,"unpairRequest function");
+        try {
+            Method removeBond = BluetoothDevice.class.getMethod("removeBond");
+            if (!(Boolean)removeBond.invoke(device)) {
+                Log.d(TAG,"Must already be unpaired!");
+            }
+            callbackContext.success("Unpaired");
+        } catch (Exception e) {
+            Log.e("unpairRequest", "Exception", e);
+            callbackContext.error("Unpair exception:"+e);
+		}
+     }
+
+
+
+    private void pairRequest(CordovaArgs args, final CallbackContext callbackContext) throws JSONException {
+         String macAddress = args.getString(0);
+         BluetoothDevice device = bluetoothAdapter.getRemoteDevice(macAddress);
+         String pin="";
+         try {
+            pin=args.getString(1);
+         } catch (JSONException e)  {
+
+         }
+		 final String PIN=pin;
+         Log.d(TAG,"pairRequest; mac:"+macAddress+" PIN:"+PIN);
+         final BroadcastReceiver pairingReceiver = new BroadcastReceiver() {
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+				int bondState = intent.getIntExtra(BluetoothDevice.EXTRA_BOND_STATE, 0);
+                Log.d(TAG,"action:"+action +" bondState:"+bondState+" 12=Bonded 11=Bonding 10=None");
+                if (BluetoothDevice.ACTION_PAIRING_REQUEST.equals(action)) {
+                    Log.d(TAG,"Setting PIN");
+                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    device.setPin(PIN.getBytes());
+                    device.setPairingConfirmation(true);
+                }
+                if (bondState == BluetoothDevice.BOND_BONDED) {
+                    callbackContext.success("PAIRED correctly");
+                }
+                else {
+                    if (bondState == BluetoothDevice.BOND_NONE) {
+                        callbackContext.error("PAIR failed because of state:"+bondState);
+                    }
+                }
+                if (bondState == BluetoothDevice.BOND_BONDED || bondState == BluetoothDevice.BOND_NONE) {
+                    cordova.getActivity().unregisterReceiver(this);
+                }
+            }
+        };
+        Activity activity = cordova.getActivity();
+        activity.registerReceiver(pairingReceiver, new IntentFilter(BluetoothDevice.ACTION_BOND_STATE_CHANGED));
+        activity.registerReceiver(pairingReceiver, new IntentFilter(BluetoothDevice.ACTION_PAIRING_REQUEST));
+        activity.registerReceiver(pairingReceiver, new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
+
+        Log.d(TAG,"About to createBond()");
+        if(device.createBond() != true) {
+            Log.d(TAG,"Must already be bonded/paired!");
+            callbackContext.success("PAIRED already");
+        }
     }
 
     private JSONObject deviceToJSON(BluetoothDevice device) throws JSONException {
